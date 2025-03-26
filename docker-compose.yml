@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:14
+    container_name: fake-mail-db
+    environment:
+      POSTGRES_USER: mail
+      POSTGRES_PASSWORD: mailpassword
+      POSTGRES_DB: mailserver
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Go Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fake-mail-backend
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: mail
+      DB_PASSWORD: mailpassword
+      DB_NAME: mailserver
+      PORT: 8080
+    ports:
+      - "8080:8080"
+      - "1025:1025"  # SMTP port
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  # React Native Expo Web Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fake-mail-frontend
+    environment:
+      EXPO_DEVTOOLS_LISTEN_ADDRESS: 0.0.0.0
+      REACT_NATIVE_PACKAGER_HOSTNAME: localhost
+      REACT_APP_ENV: docker
+    ports:
+      - "19000:19000"
+      - "19002:19002"
+      - "3000:3000"  # Web port
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
